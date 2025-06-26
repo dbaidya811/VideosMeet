@@ -54,6 +54,13 @@ endCallBtn.addEventListener('click', () => {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
     }
+    
+    // Remove local video box
+    const localVideoBox = document.getElementById('local-video-box');
+    if (localVideoBox) {
+        localVideoBox.remove();
+    }
+    
     socket.disconnect();
     window.location.href = '/';
 });
@@ -71,12 +78,33 @@ function joinRoom(roomId, userName) {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
             localStream = stream;
-            localVideo.srcObject = stream;
-            localVideo.style.border = '2px solid green'; // Mic is on by default
+            
+            // Create local video box and add to grid
+            const localVideoBox = document.createElement('div');
+            localVideoBox.id = 'local-video-box';
+            localVideoBox.className = 'video-box';
+
+            const localVideoElement = document.createElement('video');
+            localVideoElement.id = 'localVideo';
+            localVideoElement.autoplay = true;
+            localVideoElement.muted = true;
+            localVideoElement.playsInline = true;
+            localVideoElement.srcObject = stream;
+
+            const localNameTag = document.createElement('div');
+            localNameTag.className = 'name-tag';
+            localNameTag.textContent = `${userName} (You)`;
+
+            localVideoBox.appendChild(localVideoElement);
+            localVideoBox.appendChild(localNameTag);
+            remoteVideos.appendChild(localVideoBox);
+
+            // Set initial border to 5px solid green
+            localVideoElement.style.border = '5px solid green';
 
             if (stream.getAudioTracks().length === 0) {
                 alert('Could not find a microphone. Other users will not be able to hear you.');
-                localVideo.style.border = '2px solid red';
+                localVideoElement.style.border = '5px solid red';
             }
             if (stream.getVideoTracks().length === 0) {
                 alert('Could not find a camera. Other users will not be able to see you.');
@@ -267,7 +295,10 @@ function toggleMic() {
     console.log(`Toggling mic. New state: ${isMicOn ? 'ON' : 'OFF'}`);
     audioTracks.forEach(track => track.enabled = isMicOn);
 
-    localVideo.style.border = isMicOn ? '2px solid green' : '2px solid red';
+    const localVideoElement = document.getElementById('localVideo');
+    if (localVideoElement) {
+        localVideoElement.style.border = isMicOn ? '5px solid green' : '5px solid red';
+    }
 
     micBtn.innerHTML = isMicOn ?
         `<i class="fa-solid fa-microphone"></i>` :
@@ -333,6 +364,9 @@ async function replaceTrack(newTrack) {
     // also update local video display if it's a video track
     if (newTrack.kind === 'video') {
         const newStream = new MediaStream([newTrack, ...localStream.getAudioTracks()]);
-        localVideo.srcObject = newStream;
+        const localVideoElement = document.getElementById('localVideo');
+        if (localVideoElement) {
+            localVideoElement.srcObject = newStream;
+        }
     }
 }
